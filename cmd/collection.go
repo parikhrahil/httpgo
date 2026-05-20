@@ -95,8 +95,7 @@ func executeHTTP(cmd *cobra.Command, args []string) error {
 		return err
 	}
 
-	writeToFile(cmd, body)
-	printToConsole(cmd, res, body)
+	out(cmd, res, body)
 	return nil
 }
 
@@ -118,12 +117,20 @@ func applyVarFlags(cmd *cobra.Command, ctx *utils.CollectionContext) {
 	}
 }
 
-func writeToFile(cmd *cobra.Command, body []byte) {
+func out(cmd *cobra.Command, res *nethttp.Response, body []byte) {
 	outfile, _ := cmd.Flags().GetString("output")
+	teefile, _ := cmd.Flags().GetString("tee")
+
 	if outfile == "" {
-		return
+		printToConsole(cmd, res, body)
 	}
-	utils.WriteToFile(outfile, body)
+	dest := outfile
+	if dest == "" {
+		dest = teefile
+	}
+	if dest != "" {
+		utils.WriteToFile(dest, body)
+	}
 }
 
 func printToConsole(cmd *cobra.Command, res *nethttp.Response, body []byte) {
@@ -143,6 +150,7 @@ func init() {
 
 	f := collectionCmd.Flags()
 	f.StringP("output", "o", "", "append the response body to this file (path)")
+	f.StringP("tee", "T", "", "append the response body to this file (path) and print the output to console (mutually exclusive with --output)")
 	f.Bool("dry-run", false, "resolve variables and print the request without sending it")
 	f.BoolP("prettify", "p", true, "pretty-print JSON response bodies")
 	f.BoolP("raw", "r", false, "print only the response body (suppresses request dump and status line)")
@@ -152,5 +160,8 @@ func init() {
 	f.StringArrayP("global-vars", "g", nil, "upsert KEY=VALUE into the shared globalenv before running (repeatable)")
 	f.StringArrayP("unset", "u", nil, "delete KEY from the namespace's env file before running (repeatable)")
 	f.StringArrayP("global-unset", "U", nil, "delete KEY from the shared globalenv before running (repeatable)")
+
 	collectionCmd.MarkFlagFilename("output")
+	collectionCmd.MarkFlagFilename("tee")
+	collectionCmd.MarkFlagsMutuallyExclusive("output", "tee")
 }
