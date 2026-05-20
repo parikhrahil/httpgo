@@ -6,6 +6,7 @@ package cmd
 import (
 	"fmt"
 	"os"
+	"runtime/debug"
 
 	"github.com/parikhrahil/httpgo/internal/config"
 
@@ -34,6 +35,7 @@ Commands:
   list       (ls)       List namespaces (and optionally their requests)
   env                   Print the variables visible to a namespace (or globalenv)
   wd                    Print the collections working directory`,
+	Version: resolveVersion(),
 }
 
 // Execute is the entrypoint invoked by main().
@@ -57,4 +59,12 @@ func init() {
 	if err == nil {
 		f.Close()
 	}
+}
+
+func resolveVersion() string {
+	info, ok := debug.ReadBuildInfo()
+	if !ok || info.Main.Version == "(devel)" {
+		return "unknown (built from source)"
+	}
+	return info.Main.Version
 }

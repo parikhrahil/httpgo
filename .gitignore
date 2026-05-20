@@ -34,3 +34,8 @@ go.work.sum
 # CLAUDE
 .claude/
 CLAUDE.md
+
+# builds
+bin/
+target/
+/httpgo
