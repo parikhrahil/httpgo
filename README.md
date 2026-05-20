@@ -217,8 +217,8 @@ Aliases: `cl`, `run`. Executes a named request.
 | `-g, --global-vars KEY=VAL` | Upsert into the shared `globalenv`. Repeatable. |
 | `-u, --unset KEY` | Delete a key from the namespace's `env` file. Repeatable. |
 | `-U, --global-unset KEY` | Delete a key from the shared `globalenv`. Repeatable. |
-| `--dry-run` | Declared but not yet honored. |
-| `--timeout <duration>` | Declared but not yet honored. |
+| `--dry-run` | Resolve variables and print the request without sending it. |
+| `-t, --timeout <duration>` | Per-request timeout, e.g. `5s` or `500ms`. Applied via a per-request `context.WithTimeout`, so the shared client's default ceiling is untouched. |
 
 ### `list [namespace]`
 

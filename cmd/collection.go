@@ -34,9 +34,7 @@ Use --vars / --global-vars to upsert overrides into the namespace's env
 file or the shared globalenv, respectively, before the request runs.
 Use --unset / --global-unset to delete keys from those same files before
 the request runs. Clears are applied before overrides, so the same key
-can be cleared and re-set in one invocation.
-
-The --dry-run and --timeout flags are declared but not yet honored.`,
+can be cleared and re-set in one invocation.`,
 	Args: cobra.MatchAll(cobra.ExactArgs(2), func(cmd *cobra.Command, args []string) error {
 		return validateServiceArg(config.GetWorkingDirectory(), args[0])
 	}),
@@ -84,7 +82,8 @@ func executeHTTP(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	res, body, err := http.ExecuteHTTPRequest(req)
+	timeout, _ := cmd.Flags().GetDuration("timeout")
+	res, body, err := http.ExecuteHTTPRequest(req, timeout)
 	if err != nil {
 		return err
 	}
@@ -137,11 +136,11 @@ func init() {
 
 	f := collectionCmd.Flags()
 	f.StringP("output", "o", "", "append the response body to this file (path)")
-	f.Bool("dry-run", false, "resolve variables and print the request without sending it (not yet implemented)")
+	f.Bool("dry-run", false, "resolve variables and print the request without sending it")
 	f.BoolP("prettify", "p", true, "pretty-print JSON response bodies")
 	f.BoolP("raw", "r", false, "print only the response body (suppresses request dump and status line)")
 	f.BoolP("include-headers", "H", false, "include response headers in the printed output")
-	f.Duration("timeout", 0, "per-request timeout, e.g. 5s or 500ms (not yet implemented)")
+	f.DurationP("timeout", "t", 0, "per-request timeout, e.g. 5s or 500ms")
 	f.StringArrayP("vars", "v", nil, "upsert KEY=VALUE into the namespace's env file before running (repeatable)")
 	f.StringArrayP("global-vars", "g", nil, "upsert KEY=VALUE into the shared globalenv before running (repeatable)")
 	f.StringArrayP("unset", "u", nil, "delete KEY from the namespace's env file before running (repeatable)")

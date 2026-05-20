@@ -1,6 +1,7 @@
 package http
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net"
@@ -8,11 +9,13 @@ import (
 	"time"
 )
 
+const defaultTimeout time.Duration = 30 * time.Second
+
 var client *http.Client
 
 func init() {
 	client = &http.Client{
-		Timeout: 30 * time.Second,
+		Timeout: defaultTimeout,
 		Transport: &http.Transport{
 			// MaxIdleConns controls the total connection pool size across all hosts
 			MaxIdleConns:        100,
@@ -29,11 +32,18 @@ func init() {
 	}
 }
 
-func ExecuteHTTPRequest(req *http.Request) (*http.Response, []byte, error) {
+func ExecuteHTTPRequest(req *http.Request, timeout time.Duration) (*http.Response, []byte, error) {
 	// Clear out RequestURI for outgoing client requests to avoid runtime panics
 	req.RequestURI = ""
 
-	res, err := client.Do(req)
+	ctx := req.Context()
+	if timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, timeout)
+		defer cancel()
+	}
+
+	res, err := client.Do(req.WithContext(ctx))
 	if err != nil {
 		return nil, nil, fmt.Errorf("network request failed: %w", err)
 	}

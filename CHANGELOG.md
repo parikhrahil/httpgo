@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-05-20
+
+### Added
+
+- `-t` short alias for `collection --timeout`.
+
+### Fixed
+
+- `collection --timeout <duration>` is now honored at runtime via a per-request
+  `context.WithTimeout`, leaving the shared client's default 30s ceiling
+  unchanged. Previously the flag was declared but ignored.
+- Removed stale "not yet implemented" notes from `collection --dry-run` and
+  `--timeout` help text.
+
 ## [1.0.0] - 2026-05-20
 
 ### Added
@@ -34,4 +48,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Makefile` with `build`, `install` (defaults to `~/.local/bin`), and
   `clean` targets.
 
+[1.0.1]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.1
 [1.0.0]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.0
