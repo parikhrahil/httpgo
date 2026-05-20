@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"os"
-	"slices"
 	"strconv"
 	"strings"
 
@@ -28,7 +27,12 @@ func GetValidCollections(dir string) ([]string, error) {
 	return coll, nil
 }
 
-func ParseNamedRequest(dir, namespace, namedRequest string) (*http.Request, error) {
+// parseNamedRequest reads <dir>/<namespace>/http, locates the request block
+// whose @name matches namedRequest, substitutes {KEY} placeholders using env,
+// and parses the resulting bytes into an *http.Request. The env files are not
+// touched — the caller is expected to have resolved env already (typically via
+// CollectionContext).
+func parseNamedRequest(dir, namespace, namedRequest string, env map[string]string) (*http.Request, error) {
 	collection := getFilePath(dir, namespace, "http")
 
 	collectionFile, err := os.Open(collection)
@@ -85,8 +89,8 @@ func ParseNamedRequest(dir, namespace, namedRequest string) (*http.Request, erro
 
 	rawHTTP := strings.Join(foundBlock, "\r\n")
 
-	// Substitute {KEY} placeholders with values from globalenv + namespace env.
-	for key, value := range GetEnvVariables(dir, namespace) {
+	// Substitute {KEY} placeholders using the caller-supplied env.
+	for key, value := range env {
 		rawHTTP = strings.ReplaceAll(rawHTTP, fmt.Sprintf("{%s}", key), value)
 	}
 
@@ -139,6 +143,9 @@ func ParseNamedRequest(dir, namespace, namedRequest string) (*http.Request, erro
 	return req, nil
 }
 
+// GetEnvVariables returns globalenv merged with <namespace>/env (namespace
+// values win on key conflicts). Used by the env subcommand for display.
+// The collection command path uses CollectionContext instead.
 func GetEnvVariables(dir, namespace string) map[string]string {
 	localvars, _ := config.Load(getFilePath(dir, namespace, "env"))
 	return merge(GetGlobalEnvVariables(), localvars)
@@ -200,57 +207,6 @@ func extractName(trimmed string) (string, bool) {
 		return "", false
 	}
 	return strings.TrimSpace(strings.TrimPrefix(cleanComment, "@name")), true
-}
-
-func OverrideCollectionVars(dir, namespace string, variables []string) {
-	overrideVariables(getFilePath(dir, namespace, "env"), variables)
-}
-
-func OverrideGlobalVars(variables []string) {
-	overrideVariables(config.GetGlobalEnvFile(), variables)
-}
-
-func ClearCollectionVars(dir, namespace string, variables []string) {
-	clearVars(getFilePath(dir, namespace, "env"), variables)
-}
-
-func ClearGlobalVars(variables []string) {
-	clearVars(config.GetGlobalEnvFile(), variables)
-}
-
-func clearVars(filePath string, variables []string) {
-	oldv, err := config.Load(filePath)
-	if err != nil {
-		panic("Failed to clear variables from " + filePath)
-	}
-
-	newv := map[string]string{}
-	for k, v := range oldv {
-		if !slices.Contains(variables, k) {
-			newv[k] = v
-		}
-	}
-	writeToFile(filePath, newv)
-}
-
-func overrideVariables(filePath string, variables []string) {
-	oldv, err := config.Load(filePath)
-	if err != nil {
-		panic("Failed to override variables from " + filePath)
-	}
-	writeToFile(filePath, merge(oldv, parseVariables(variables)))
-}
-
-func writeToFile(filePath string, variables map[string]string) {
-	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
-	if err != nil {
-		panic("Failed while writing namespace variables to file")
-	}
-	defer file.Close()
-
-	for k, v := range variables {
-		fmt.Fprintf(file, "%s=%s\n", k, v)
-	}
 }
 
 func parseVariables(variables []string) map[string]string {

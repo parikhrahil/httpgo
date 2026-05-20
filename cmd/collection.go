@@ -63,10 +63,17 @@ func executeHTTP(cmd *cobra.Command, args []string) error {
 	namespace := args[0]
 	request := args[1]
 
-	clearVariables(cmd, dir, namespace)
-	overrideVariables(cmd, dir, namespace)
+	ctx, err := utils.NewCollectionContext(dir, namespace)
+	if err != nil {
+		return err
+	}
 
-	req, err := utils.ParseNamedRequest(dir, namespace, request)
+	applyVarFlags(cmd, ctx)
+	if err := ctx.Persist(); err != nil {
+		return err
+	}
+
+	req, err := ctx.ParseNamedRequest(request)
 	if err != nil {
 		return err
 	}
@@ -93,21 +100,21 @@ func executeHTTP(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func overrideVariables(cmd *cobra.Command, dir, namespace string) {
+// applyVarFlags applies --unset / --global-unset (clears) before
+// --vars / --global-vars (overrides), so the same key can be cleared and
+// re-set in a single invocation.
+func applyVarFlags(cmd *cobra.Command, ctx *utils.CollectionContext) {
+	if unset, _ := cmd.Flags().GetStringArray("unset"); len(unset) > 0 {
+		ctx.ClearLocal(unset)
+	}
+	if globalUnset, _ := cmd.Flags().GetStringArray("global-unset"); len(globalUnset) > 0 {
+		ctx.ClearGlobal(globalUnset)
+	}
 	if vars, _ := cmd.Flags().GetStringArray("vars"); len(vars) > 0 {
-		utils.OverrideCollectionVars(dir, namespace, vars)
+		ctx.OverrideLocal(vars)
 	}
-	if globalvars, _ := cmd.Flags().GetStringArray("global-vars"); len(globalvars) > 0 {
-		utils.OverrideGlobalVars(globalvars)
-	}
-}
-
-func clearVariables(cmd *cobra.Command, dir, namespace string) {
-	if vars, _ := cmd.Flags().GetStringArray("unset"); len(vars) > 0 {
-		utils.ClearCollectionVars(dir, namespace, vars)
-	}
-	if globalvars, _ := cmd.Flags().GetStringArray("global-unset"); len(globalvars) > 0 {
-		utils.ClearGlobalVars(globalvars)
+	if globalVars, _ := cmd.Flags().GetStringArray("global-vars"); len(globalVars) > 0 {
+		ctx.OverrideGlobal(globalVars)
 	}
 }
 
