@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.2] - 2026-05-20
+
+### Added
+
+- `-T, --tee FILE` on `collection` to append the response body to a file
+  *and* print it to the console. Mutually exclusive with `-o, --output`.
+
+### Changed
+
+- `collection` now resolves env state through a single `CollectionContext`:
+  each env file (`globalenv`, `<namespace>/env`) is read at most once per
+  run, `--vars` / `--global-vars` / `--unset` / `--global-unset` mutate the
+  in-memory env, and every dirty file is written back exactly once before
+  the request is parsed. A no-flag run touches zero env files.
+
+### Fixed
+
+- `collection -v` / `-g` / `-u` / `-U` on a namespace whose `env` file did
+  not yet exist no longer panics — the missing file is treated as empty
+  and created on persist when needed.
+
 ## [1.0.1] - 2026-05-20
 
 ### Added
@@ -48,5 +69,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Makefile` with `build`, `install` (defaults to `~/.local/bin`), and
   `clean` targets.
 
+[1.0.2]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.2
 [1.0.1]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.1
 [1.0.0]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.0
