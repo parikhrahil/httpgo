@@ -4,11 +4,8 @@ Copyright © 2026 Rahil Parikh <rahilparikh11@gmail.com>
 package cmd
 
 import (
-	"fmt"
 	"os"
 	"runtime/debug"
-
-	"github.com/parikhrahil/httpgo/internal/config"
 
 	"github.com/spf13/cobra"
 )
@@ -42,22 +39,6 @@ Commands:
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		os.Exit(1)
-	}
-}
-
-func init() {
-	wd := config.GetWorkingDirectory()
-
-	// 0755: rwx for owner, rx for group/others.
-	if err := os.MkdirAll(wd, 0755); err != nil {
-		fmt.Printf("Failed to create directory %s. Please create manually\n", wd)
-	}
-
-	// Touch globalenv if it doesn't already exist; O_EXCL preserves any
-	// existing contents. Ignore the "already exists" error.
-	f, err := os.OpenFile(config.GetGlobalEnvFile(), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
-	if err == nil {
-		f.Close()
 	}
 }
 

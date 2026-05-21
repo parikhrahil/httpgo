@@ -25,6 +25,9 @@ values override global values for the same key.
   httpgo env             # globalenv only
   httpgo env appwf       # globalenv merged with appwf/env (appwf wins on conflicts)`,
 	Args: cobra.MaximumNArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return config.EnsureWorkingDirectory()
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		return envRun(args)

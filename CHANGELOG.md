@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.4] - 2026-05-21
+
+### Changed
+
+- The `~/.httpgo/collections` directory and `globalenv` file are now created
+  lazily by the commands that need them (`collection`, `list`, `env`, `wd`)
+  via `config.EnsureWorkingDirectory()`, instead of at binary init in
+  `cmd/root.go`. Commands that don't touch collections (`--help`,
+  `--version`) no longer materialise the workspace.
+
 ## [1.0.3] - 2026-05-21
 
 ### Added
@@ -80,6 +90,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `Makefile` with `build`, `install` (defaults to `~/.local/bin`), and
   `clean` targets.
 
+[1.0.4]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.4
 [1.0.3]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.3
 [1.0.2]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.2
 [1.0.1]: https://github.com/parikhrahil/httpgo/releases/tag/v1.0.1

@@ -27,6 +27,9 @@ arg to restrict output to a single namespace (its requests are always shown).
   httpgo ls --all
   httpgo ls appwf`,
 	Args: cobra.MaximumNArgs(1),
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return config.EnsureWorkingDirectory()
+	},
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
 		return listRun(cmd, args)

@@ -45,6 +45,10 @@ can be cleared and re-set in one invocation.`,
 }
 
 func validateServiceArg(dir, namespace string) error {
+	err := config.EnsureWorkingDirectory()
+	if err != nil {
+		return err
+	}
 	coll, err := utils.GetValidCollections(dir)
 	if err != nil {
 		return err

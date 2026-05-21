@@ -17,6 +17,9 @@ var wdCmd = &cobra.Command{
 	Short: "Print the collections working directory",
 	Long: `Print the absolute path of the collections working directory
 (~/.httpgo/collections) that every other command reads from.`,
+	PreRunE: func(cmd *cobra.Command, args []string) error {
+		return config.EnsureWorkingDirectory()
+	},
 	Run: func(cmd *cobra.Command, args []string) {
 		fmt.Println(config.GetWorkingDirectory())
 	},

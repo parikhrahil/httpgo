@@ -1,13 +1,33 @@
 package config
 
 import (
+	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path"
 	"path/filepath"
 	"regexp"
 	"strings"
 )
+
+func EnsureWorkingDirectory() error {
+	wd := GetWorkingDirectory()
+	// 0755: rwx for owner, rx for group/others.
+	if err := os.MkdirAll(wd, 0755); err != nil {
+		return fmt.Errorf("create %s: %w", wd, err)
+	}
+	// Touch globalenv if it doesn't already exist; O_EXCL preserves any
+	// existing contents. Ignore the "already exists" error.
+	f, err := os.OpenFile(GetGlobalEnvFile(), os.O_CREATE|os.O_EXCL|os.O_WRONLY, 0666)
+	if err == nil {
+		return f.Close()
+	}
+	if errors.Is(err, fs.ErrExist) {
+		return nil // already exists is not an error
+	}
+	return fmt.Errorf("touch globalenv: %w", err)
+}
 
 func GetWorkingDirectory() string {
 	hd, _ := os.UserHomeDir()
