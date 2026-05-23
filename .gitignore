@@ -2,6 +2,7 @@
 # https://github.com/github/gitignore/blob/main/community/Golang/Go.AllowList.gitignore
 #
 # Binaries for programs and plugins
+.DS_Store
 *.exe
 *.exe~
 *.dll
@@ -39,3 +40,6 @@ CLAUDE.md
 bin/
 target/
 /httpgo
+
+# tool versioning
+.tool-versions

@@ -2,9 +2,11 @@ package utils
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
+	"maps"
 	"net/http"
 	"net/url"
 	"os"
@@ -58,6 +60,7 @@ func WriteToFile(filepath string, body []byte) {
 // (or parsed form values when the body is form-encoded). It reads req.Body
 // and restores it so the request can still be sent afterwards.
 func PrintRequest(req *http.Request) {
+	fmt.Println("--------------------------------------------------")
 	fmt.Printf("Method: %s\nURL: %s\n", req.Method, req.URL.String())
 
 	if len(req.Header) > 0 {
@@ -135,4 +138,21 @@ func IsValidNamespace(ns string) bool {
 		panic("Error loading collections from " + wd)
 	}
 	return slices.Contains(namespaces, ns)
+}
+
+func Merge(variables ...map[string]any) map[string]any {
+	vars := map[string]any{}
+	for _, variable := range variables {
+		maps.Copy(vars, variable)
+	}
+	return vars
+}
+
+func SendErr(ctx context.Context, errChan chan<- error, err error) bool {
+	select {
+	case errChan <- err:
+		return true
+	case <-ctx.Done():
+		return false
+	}
 }

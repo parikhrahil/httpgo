@@ -3,10 +3,14 @@ INSTALL_DIR ?= $(HOME)/.local/bin
 
 .PHONY: build install clean
 
-build:
+help: ## Show this help
+	@echo "Available make commands:"
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-25s\033[0m %s\n", $$1, $$2}'
+
+build: ## Build the service binary
 	go build -o $(BINARY) .
 
-install: build
+install: build ## Install the binary in $HOME/.local/bin
 	@mkdir -p $(INSTALL_DIR)
 	@install -m 0755 $(BINARY) $(INSTALL_DIR)/$(BINARY)
 	@echo ""
@@ -23,5 +27,5 @@ install: build
 	    echo "" ;; \
 	esac
 
-clean:
+clean: ## Delete the installed binaries
 	@rm -f $(BINARY)

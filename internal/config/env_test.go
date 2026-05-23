@@ -27,7 +27,7 @@ func TestGetGlobalEnvFile(t *testing.T) {
 func TestLoad_BasicFile(t *testing.T) {
 	got, err := config.Load("./testdata/basic.env")
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"FOO": "bar",
 		"BAZ": "qux",
 	}, got)
@@ -36,7 +36,7 @@ func TestLoad_BasicFile(t *testing.T) {
 func TestLoad_StripsCommentsAndKeepsHashInsideValues(t *testing.T) {
 	got, err := config.Load("./testdata/comments.env")
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"HOST":  "localhost",
 		"PORT":  "8080",
 		"TOKEN": "abc",
@@ -46,7 +46,7 @@ func TestLoad_StripsCommentsAndKeepsHashInsideValues(t *testing.T) {
 func TestLoad_QuotedValues(t *testing.T) {
 	got, err := config.Load("./testdata/quoted.env")
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"PLAIN":       "hello",
 		"WITH_SPACES": "hello world",
 		"WITH_INLINE": "hello world",
@@ -57,7 +57,7 @@ func TestLoad_QuotedValues(t *testing.T) {
 func TestLoad_WhitespaceAndTabs(t *testing.T) {
 	got, err := config.Load("./testdata/whitespace.env")
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"PADDED": "spaced value",
 		"TAB":    "tabbed",
 	}, got)
@@ -72,7 +72,7 @@ func TestLoad_EmptyFile(t *testing.T) {
 func TestLoad_LaterFileOverridesEarlier(t *testing.T) {
 	got, err := config.Load("./testdata/basic.env", "./testdata/override.env")
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"FOO": "overridden",
 		"BAZ": "qux",
 		"NEW": "fresh",

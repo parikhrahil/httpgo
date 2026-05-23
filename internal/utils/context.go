@@ -17,8 +17,8 @@ import (
 type CollectionContext struct {
 	Dir         string
 	Namespace   string
-	global      map[string]string
-	local       map[string]string
+	global      map[string]any
+	local       map[string]any
 	globalDirty bool
 	localDirty  bool
 }
@@ -83,25 +83,25 @@ func (c *CollectionContext) Persist() error {
 }
 
 // Env returns the merged effective env: globalenv overridden by namespace env.
-func (c *CollectionContext) Env() map[string]string {
-	return merge(c.global, c.local)
+func (c *CollectionContext) Env() map[string]any {
+	return Merge(c.global, c.local)
 }
 
 // ParseNamedRequest reads <namespace>/http and substitutes {KEY} placeholders
 // using the in-memory env. The env files are not re-read.
 func (c *CollectionContext) ParseNamedRequest(name string) (*http.Request, error) {
-	return parseNamedRequest(c.Dir, c.Namespace, name, c.Env())
+	return ParseNamedRequest(c.Dir, c.Namespace, name, c.Env())
 }
 
-func loadEnvAllowMissing(path string) (map[string]string, error) {
+func loadEnvAllowMissing(path string) (map[string]any, error) {
 	env, err := config.Load(path)
 	if errors.Is(err, fs.ErrNotExist) {
-		return map[string]string{}, nil
+		return map[string]any{}, nil
 	}
 	return env, err
 }
 
-func removeKeys(m map[string]string, keys []string) bool {
+func removeKeys(m map[string]any, keys []string) bool {
 	dirty := false
 	for _, k := range keys {
 		if _, ok := m[k]; ok {
@@ -112,7 +112,7 @@ func removeKeys(m map[string]string, keys []string) bool {
 	return dirty
 }
 
-func applyOverrides(m map[string]string, pairs []string) bool {
+func applyOverrides(m map[string]any, pairs []string) bool {
 	if len(pairs) == 0 {
 		return false
 	}
@@ -122,7 +122,7 @@ func applyOverrides(m map[string]string, pairs []string) bool {
 	return true
 }
 
-func writeEnvFile(filePath string, variables map[string]string) error {
+func writeEnvFile(filePath string, variables map[string]any) error {
 	file, err := os.OpenFile(filePath, os.O_CREATE|os.O_TRUNC|os.O_WRONLY, 0644)
 	if err != nil {
 		return fmt.Errorf("failed to open %s for writing: %w", filePath, err)

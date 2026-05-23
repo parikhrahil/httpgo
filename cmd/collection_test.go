@@ -85,11 +85,11 @@ func TestApplyVarFlags_ClearsRunBeforeOverrides(t *testing.T) {
 	require.NoError(t, err)
 
 	c := newCollectionTestCmd()
-	require.NoError(t, c.Flags().Set("unset", "TOKEN"))
-	require.NoError(t, c.Flags().Set("vars", "TOKEN=fresh"))
+	require.NoError(t, c.PersistentFlags().Set("unset", "TOKEN"))
+	require.NoError(t, c.PersistentFlags().Set("vars", "TOKEN=fresh"))
 
 	applyVarFlags(c, ctx)
-	assert.Equal(t, map[string]string{"TOKEN": "fresh"}, ctx.Env())
+	assert.Equal(t, map[string]any{"TOKEN": "fresh"}, ctx.Env())
 }
 
 func TestApplyVarFlags_GlobalCleanupAndOverride(t *testing.T) {
@@ -102,11 +102,11 @@ func TestApplyVarFlags_GlobalCleanupAndOverride(t *testing.T) {
 	require.NoError(t, err)
 
 	c := newCollectionTestCmd()
-	require.NoError(t, c.Flags().Set("global-unset", "DROP"))
-	require.NoError(t, c.Flags().Set("global-vars", "NEW=fresh"))
+	require.NoError(t, c.PersistentFlags().Set("global-unset", "DROP"))
+	require.NoError(t, c.PersistentFlags().Set("global-vars", "NEW=fresh"))
 
 	applyVarFlags(c, ctx)
-	assert.Equal(t, map[string]string{"KEEP": "ok", "NEW": "fresh"}, ctx.Env())
+	assert.Equal(t, map[string]any{"KEEP": "ok", "NEW": "fresh"}, ctx.Env())
 }
 
 func TestExecuteHTTP_HappyPathSendsRequestAndPrints(t *testing.T) {
@@ -123,7 +123,7 @@ func TestExecuteHTTP_HappyPathSendsRequestAndPrints(t *testing.T) {
 
 	c := newCollectionTestCmd()
 	out := captureStdout(t, func() {
-		require.NoError(t, executeHTTP(c, []string{"svc", "fetch"}))
+		require.NoError(t, collectionRun(c, []string{"svc", "fetch"}))
 	})
 
 	assert.Equal(t, int32(1), atomic.LoadInt32(&hits), "request should hit the test server exactly once")
@@ -143,10 +143,10 @@ func TestExecuteHTTP_DryRunSkipsNetworkAndPrintsRequest(t *testing.T) {
 	writeHTTPBlock(t, wd, "svc", "fetch", "GET", srv.URL, "")
 
 	c := newCollectionTestCmd()
-	require.NoError(t, c.Flags().Set("dry-run", "true"))
+	require.NoError(t, c.PersistentFlags().Set("dry-run", "true"))
 
 	out := captureStdout(t, func() {
-		require.NoError(t, executeHTTP(c, []string{"svc", "fetch"}))
+		require.NoError(t, collectionRun(c, []string{"svc", "fetch"}))
 	})
 	assert.Contains(t, out, "Method: GET")
 	assert.NotContains(t, out, "Response Status:", "dry-run must not produce a response section")
@@ -166,7 +166,7 @@ func TestExecuteHTTP_OutputFlagWritesBodyToFileAndSuppressesConsole(t *testing.T
 	require.NoError(t, c.Flags().Set("output", outfile))
 
 	console := captureStdout(t, func() {
-		require.NoError(t, executeHTTP(c, []string{"svc", "fetch"}))
+		require.NoError(t, collectionRun(c, []string{"svc", "fetch"}))
 	})
 
 	// --output skips the console "Response Status:" path entirely; only the
@@ -193,7 +193,7 @@ func TestExecuteHTTP_TeeFlagWritesBodyAndPrintsToConsole(t *testing.T) {
 	require.NoError(t, c.Flags().Set("tee", teefile))
 
 	out := captureStdout(t, func() {
-		require.NoError(t, executeHTTP(c, []string{"svc", "fetch"}))
+		require.NoError(t, collectionRun(c, []string{"svc", "fetch"}))
 	})
 
 	// --tee prints AND writes.
@@ -223,10 +223,10 @@ func TestExecuteHTTP_VarsFlagPersistsAndInterpolates(t *testing.T) {
 	makeFile(t, wd, httpFile, "svc", "http")
 
 	c := newCollectionTestCmd()
-	require.NoError(t, c.Flags().Set("vars", "PATH=/things/42"))
+	require.NoError(t, c.PersistentFlags().Set("vars", "PATH=/things/42"))
 
 	captureStdout(t, func() {
-		require.NoError(t, executeHTTP(c, []string{"svc", "fetch"}))
+		require.NoError(t, collectionRun(c, []string{"svc", "fetch"}))
 	})
 
 	assert.Equal(t, "/things/42", gotPath)
@@ -244,7 +244,7 @@ func TestExecuteHTTP_UnknownRequestReturnsError(t *testing.T) {
 	c := newCollectionTestCmd()
 	// Suppress the partial request dump that prints before ParseNamedRequest fails.
 	captureStdout(t, func() {
-		err := executeHTTP(c, []string{"svc", "missing"})
+		err := collectionRun(c, []string{"svc", "missing"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "missing")
 	})
@@ -259,7 +259,7 @@ func TestExecuteHTTP_NewContextFailureBubblesUp(t *testing.T) {
 	require.NoError(t, os.MkdirAll(filepath.Join(wd, "svc"), 0o755))
 
 	c := newCollectionTestCmd()
-	err := executeHTTP(c, []string{"svc", "anything"})
+	err := collectionRun(c, []string{"svc", "anything"})
 	require.Error(t, err)
 }
 
@@ -269,10 +269,10 @@ func TestExecuteHTTP_NetworkErrorReturnsError(t *testing.T) {
 	writeHTTPBlock(t, wd, "svc", "fetch", "GET", "http://127.0.0.1:1/", "")
 
 	c := newCollectionTestCmd()
-	require.NoError(t, c.Flags().Set("timeout", "200ms"))
+	require.NoError(t, c.PersistentFlags().Set("timeout", "200ms"))
 
 	captureStdout(t, func() {
-		err := executeHTTP(c, []string{"svc", "fetch"})
+		err := collectionRun(c, []string{"svc", "fetch"})
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "network request failed")
 	})

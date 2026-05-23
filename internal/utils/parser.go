@@ -27,12 +27,12 @@ func GetValidCollections(dir string) ([]string, error) {
 	return coll, nil
 }
 
-// parseNamedRequest reads <dir>/<namespace>/http, locates the request block
+// ParseNamedRequest reads <dir>/<namespace>/http, locates the request block
 // whose @name matches namedRequest, substitutes {KEY} placeholders using env,
 // and parses the resulting bytes into an *http.Request. The env files are not
 // touched — the caller is expected to have resolved env already (typically via
 // CollectionContext).
-func parseNamedRequest(dir, namespace, namedRequest string, env map[string]string) (*http.Request, error) {
+func ParseNamedRequest(dir, namespace, namedRequest string, env map[string]any) (*http.Request, error) {
 	collection := getFilePath(dir, namespace, "http")
 
 	collectionFile, err := os.Open(collection)
@@ -91,7 +91,7 @@ func parseNamedRequest(dir, namespace, namedRequest string, env map[string]strin
 
 	// Substitute {KEY} placeholders using the caller-supplied env.
 	for key, value := range env {
-		rawHTTP = strings.ReplaceAll(rawHTTP, fmt.Sprintf("{%s}", key), value)
+		rawHTTP = strings.ReplaceAll(rawHTTP, fmt.Sprintf("{%s}", key), value.(string))
 	}
 
 	// Fix missing HTTP version on the request line.
@@ -146,12 +146,12 @@ func parseNamedRequest(dir, namespace, namedRequest string, env map[string]strin
 // GetEnvVariables returns globalenv merged with <namespace>/env (namespace
 // values win on key conflicts). Used by the env subcommand for display.
 // The collection command path uses CollectionContext instead.
-func GetEnvVariables(dir, namespace string) map[string]string {
+func GetEnvVariables(dir, namespace string) map[string]any {
 	localvars, _ := config.Load(getFilePath(dir, namespace, "env"))
-	return merge(GetGlobalEnvVariables(), localvars)
+	return Merge(GetGlobalEnvVariables(), localvars)
 }
 
-func GetGlobalEnvVariables() map[string]string {
+func GetGlobalEnvVariables() map[string]any {
 	globalvars, _ := config.Load(config.GetGlobalEnvFile())
 	return globalvars
 }
@@ -216,15 +216,4 @@ func parseVariables(variables []string) map[string]string {
 		varmap[strings.TrimSpace(parts[0])] = strings.TrimSpace(parts[1])
 	}
 	return varmap
-}
-
-func merge(gv, lv map[string]string) map[string]string {
-	vars := map[string]string{}
-	for k, v := range gv {
-		vars[k] = v
-	}
-	for k, v := range lv {
-		vars[k] = v
-	}
-	return vars
 }

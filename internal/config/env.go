@@ -40,8 +40,8 @@ func GetGlobalEnvFile() string {
 
 // Load reads each fileName as a KEY=value env file and merges the contents
 // into a single map. Later files override earlier ones on key conflicts.
-func Load(fileNames ...string) (map[string]string, error) {
-	envs := map[string]string{}
+func Load(fileNames ...string) (map[string]any, error) {
+	envs := map[string]any{}
 
 	for _, fileName := range fileNames {
 		fileData, err := os.ReadFile(filepath.Clean(fileName))

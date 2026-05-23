@@ -48,7 +48,7 @@ func envRun(args []string) error {
 	return nil
 }
 
-func printEnv(vars map[string]string) {
+func printEnv(vars map[string]any) {
 	for k, v := range vars {
 		fmt.Printf("%s=%s\n", k, v)
 	}

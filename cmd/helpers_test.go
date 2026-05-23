@@ -84,16 +84,17 @@ func parseEnvOutput(s string) map[string]string {
 func newCollectionTestCmd() *cobra.Command {
 	c := &cobra.Command{Use: "collection"}
 	f := c.Flags()
+	p := c.PersistentFlags()
 	f.String("output", "", "")
 	f.String("tee", "", "")
-	f.Bool("dry-run", false, "")
+	p.Bool("dry-run", false, "")
 	f.Bool("prettify", true, "")
 	f.Bool("raw", false, "")
 	f.Bool("include-headers", false, "")
-	f.Duration("timeout", 0, "")
-	f.StringArray("vars", nil, "")
-	f.StringArray("global-vars", nil, "")
-	f.StringArray("unset", nil, "")
-	f.StringArray("global-unset", nil, "")
+	p.Duration("timeout", 0, "")
+	p.StringArray("vars", nil, "")
+	p.StringArray("global-vars", nil, "")
+	p.StringArray("unset", nil, "")
+	p.StringArray("global-unset", nil, "")
 	return c
 }
