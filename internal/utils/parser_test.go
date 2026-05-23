@@ -95,7 +95,7 @@ func TestGetGlobalEnvVariables_ReadsGlobalEnvFile(t *testing.T) {
 		[]byte("HOST=global.example.com\nTOKEN=topsecret\n"), 0o644))
 
 	got := utils.GetGlobalEnvVariables()
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"HOST":  "global.example.com",
 		"TOKEN": "topsecret",
 	}, got)
@@ -118,7 +118,7 @@ func TestGetEnvVariables_LocalOverridesGlobal(t *testing.T) {
 	makeFile(t, wd, "HOST=ns.example.com\nNS_ONLY=local\n", "svc", "env")
 
 	got := utils.GetEnvVariables(wd, "svc")
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"HOST":    "ns.example.com",
 		"SHARED":  "from-global",
 		"NS_ONLY": "local",
@@ -131,5 +131,5 @@ func TestGetEnvVariables_NoLocalEnvFallsBackToGlobal(t *testing.T) {
 		[]byte("HOST=global.example.com\n"), 0o644))
 
 	got := utils.GetEnvVariables(wd, "ns-without-env-file")
-	assert.Equal(t, map[string]string{"HOST": "global.example.com"}, got)
+	assert.Equal(t, map[string]any{"HOST": "global.example.com"}, got)
 }

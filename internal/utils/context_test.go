@@ -50,7 +50,7 @@ func TestEnv_NamespaceOverridesGlobal(t *testing.T) {
 
 	ctx, err := utils.NewCollectionContext(wd, "svc")
 	require.NoError(t, err)
-	assert.Equal(t, map[string]string{
+	assert.Equal(t, map[string]any{
 		"HOST":    "local",
 		"SHARED":  "g",
 		"NS_ONLY": "ns",
@@ -309,4 +309,3 @@ func readEnvFile(t *testing.T, path string) map[string]string {
 	}
 	return out
 }
-

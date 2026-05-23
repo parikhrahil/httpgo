@@ -18,11 +18,11 @@ func init() {
 		Timeout: defaultTimeout,
 		Transport: &http.Transport{
 			// MaxIdleConns controls the total connection pool size across all hosts
-			MaxIdleConns:        100,
+			MaxIdleConns: 100,
 			// MaxIdleConnsPerHost controls pool size for concurrent threads hitting the same host
 			MaxIdleConnsPerHost: 20,
 			// How long an idle connection stays alive in the pool before closing
-			IdleConnTimeout:     90 * time.Second,
+			IdleConnTimeout: 90 * time.Second,
 			DialContext: (&net.Dialer{
 				Timeout:   10 * time.Second,
 				KeepAlive: 30 * time.Second,

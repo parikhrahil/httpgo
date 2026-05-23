@@ -39,3 +39,6 @@ CLAUDE.md
 bin/
 target/
 /httpgo
+
+# tool versioning
+.tool-versions

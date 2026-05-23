@@ -40,7 +40,7 @@ can be cleared and re-set in one invocation.`,
 	}),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		cmd.SilenceUsage = true
-		return executeHTTP(cmd, args)
+		return collectionRun(cmd, args)
 	},
 }
 
@@ -62,18 +62,13 @@ func validateServiceArg(dir, namespace string) error {
 	return fmt.Errorf("no collection found for %s. Available collections: %v", namespace, coll)
 }
 
-func executeHTTP(cmd *cobra.Command, args []string) error {
+func collectionRun(cmd *cobra.Command, args []string) error {
 	dir := config.GetWorkingDirectory()
 	namespace := args[0]
 	request := args[1]
 
-	ctx, err := utils.NewCollectionContext(dir, namespace)
+	ctx, err := CollectionContext(cmd, dir, namespace)
 	if err != nil {
-		return err
-	}
-
-	applyVarFlags(cmd, ctx)
-	if err := ctx.Persist(); err != nil {
 		return err
 	}
 
@@ -83,7 +78,7 @@ func executeHTTP(cmd *cobra.Command, args []string) error {
 	}
 
 	raw, _ := cmd.Flags().GetBool("raw")
-	dryRun, _ := cmd.Flags().GetBool("dry-run")
+	dryRun, _ := cmd.PersistentFlags().GetBool("dry-run")
 
 	if !raw || dryRun {
 		utils.PrintRequest(req)
@@ -93,7 +88,7 @@ func executeHTTP(cmd *cobra.Command, args []string) error {
 		return nil
 	}
 
-	timeout, _ := cmd.Flags().GetDuration("timeout")
+	timeout, _ := cmd.PersistentFlags().GetDuration("timeout")
 	res, body, err := http.ExecuteHTTPRequest(req, timeout)
 	if err != nil {
 		return err
@@ -103,20 +98,33 @@ func executeHTTP(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
+func CollectionContext(cmd *cobra.Command, dir, namespace string) (*utils.CollectionContext, error) {
+	ctx, err := utils.NewCollectionContext(dir, namespace)
+	if err != nil {
+		return nil, err
+	}
+
+	applyVarFlags(cmd, ctx)
+	if err := ctx.Persist(); err != nil {
+		return nil, err
+	}
+	return ctx, nil
+}
+
 // applyVarFlags applies --unset / --global-unset (clears) before
 // --vars / --global-vars (overrides), so the same key can be cleared and
 // re-set in a single invocation.
 func applyVarFlags(cmd *cobra.Command, ctx *utils.CollectionContext) {
-	if unset, _ := cmd.Flags().GetStringArray("unset"); len(unset) > 0 {
+	if unset, _ := cmd.PersistentFlags().GetStringArray("unset"); len(unset) > 0 {
 		ctx.ClearLocal(unset)
 	}
-	if globalUnset, _ := cmd.Flags().GetStringArray("global-unset"); len(globalUnset) > 0 {
+	if globalUnset, _ := cmd.PersistentFlags().GetStringArray("global-unset"); len(globalUnset) > 0 {
 		ctx.ClearGlobal(globalUnset)
 	}
-	if vars, _ := cmd.Flags().GetStringArray("vars"); len(vars) > 0 {
+	if vars, _ := cmd.PersistentFlags().GetStringArray("vars"); len(vars) > 0 {
 		ctx.OverrideLocal(vars)
 	}
-	if globalVars, _ := cmd.Flags().GetStringArray("global-vars"); len(globalVars) > 0 {
+	if globalVars, _ := cmd.PersistentFlags().GetStringArray("global-vars"); len(globalVars) > 0 {
 		ctx.OverrideGlobal(globalVars)
 	}
 }
@@ -153,17 +161,19 @@ func init() {
 	rootCmd.AddCommand(collectionCmd)
 
 	f := collectionCmd.Flags()
+	p := collectionCmd.PersistentFlags()
+
 	f.StringP("output", "o", "", "append the response body to this file (path)")
 	f.StringP("tee", "T", "", "append the response body to this file (path) and print the output to console (mutually exclusive with --output)")
-	f.Bool("dry-run", false, "resolve variables and print the request without sending it")
+	p.Bool("dry-run", false, "resolve variables and print the request without sending it")
 	f.BoolP("prettify", "p", true, "pretty-print JSON response bodies")
 	f.BoolP("raw", "r", false, "print only the response body (suppresses request dump and status line)")
 	f.BoolP("include-headers", "H", false, "include response headers in the printed output")
-	f.DurationP("timeout", "t", 0, "per-request timeout, e.g. 5s or 500ms")
-	f.StringArrayP("vars", "v", nil, "upsert KEY=VALUE into the namespace's env file before running (repeatable)")
-	f.StringArrayP("global-vars", "g", nil, "upsert KEY=VALUE into the shared globalenv before running (repeatable)")
-	f.StringArrayP("unset", "u", nil, "delete KEY from the namespace's env file before running (repeatable)")
-	f.StringArrayP("global-unset", "U", nil, "delete KEY from the shared globalenv before running (repeatable)")
+	p.DurationP("timeout", "t", 0, "per-request timeout, e.g. 5s or 500ms")
+	p.StringArrayP("vars", "v", nil, "upsert KEY=VALUE into the namespace's env file before running (repeatable)")
+	p.StringArrayP("global-vars", "g", nil, "upsert KEY=VALUE into the shared globalenv before running (repeatable)")
+	p.StringArrayP("unset", "u", nil, "delete KEY from the namespace's env file before running (repeatable)")
+	p.StringArrayP("global-unset", "U", nil, "delete KEY from the shared globalenv before running (repeatable)")
 
 	collectionCmd.MarkFlagFilename("output")
 	collectionCmd.MarkFlagFilename("tee")
