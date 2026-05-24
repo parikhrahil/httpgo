@@ -31,7 +31,7 @@ to quickly create a Cobra application.`,
 			return fmt.Errorf("Input file type should be one of csv or json")
 		}
 		outfile, _ := cmd.Flags().GetString("output")
-		if ft := filepath.Ext(outfile); outfile != "" && ft != ".json" && ft != ".csv" {
+		if ft := filepath.Ext(outfile); outfile != "" && ft != ".csv" {
 			return fmt.Errorf("Output file type should be one of csv or json")
 		}
 		return nil

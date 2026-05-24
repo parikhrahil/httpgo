@@ -2,9 +2,11 @@ package batch
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
 	"time"
 
@@ -26,7 +28,9 @@ func fileReader(fp string) (readerFunc, error) {
 }
 
 func (b *BatchContext) Execute(c *utils.CollectionContext) error {
-	readFunc, err := fileReader(b.inFile)
+	const maxBufferSize = 100
+
+	reader, err := fileReader(b.inFile)
 	if err != nil {
 		return err
 	}
@@ -37,69 +41,140 @@ func (b *BatchContext) Execute(c *utils.CollectionContext) error {
 	}
 	defer file.Close()
 
-	fileReader := readFunc(file)
-
-	numWorkers := b.getConcurrency()
-	const maxBufferSize = 100
+	fileReader := reader(file)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	rowChan, errChan := fileReader.Read(ctx, maxBufferSize)
+	dataStream, readErrorStream := fileReader.Read(ctx, maxBufferSize)
+	results, errs := b.fanoutExecution(ctx, c, dataStream)
+	resultStream, errStream := b.fanInResult(ctx, results, errs)
 
-	resultChan := make(chan *result, maxBufferSize)
+	var outwg sync.WaitGroup
+	outwg.Add(3)
 
-	var errWg sync.WaitGroup
-	errWg.Add(1)
-
-	errWg.Go(func() {
-		defer errWg.Done()
-		// This loop naturally terminates when Read closes errChan
-		for e := range errChan {
-			b.printError(e)
+	go func() {
+		defer outwg.Done()
+		for err := range readErrorStream {
+			b.printError(err)
 		}
-	})
+	}()
 
+	go func() {
+		defer outwg.Done()
+		for res := range resultStream {
+			b.printToConsole(res)
+			b.writeOutput(res)
+		}
+	}()
+
+	go func() {
+		defer outwg.Done()
+		for err := range errStream {
+			b.printError(err)
+		}
+	}()
+
+	outwg.Wait()
+	return nil
+}
+
+func (b *BatchContext) fanInResult(ctx context.Context, results []<-chan *result, errs []<-chan error) (<-chan *result, <-chan error) {
 	var wg sync.WaitGroup
-	var outputWg sync.WaitGroup
+	var eg sync.WaitGroup
+	res := make(chan *result)
+	err := make(chan error)
 
-	outputWg.Add(1)
-	outputWg.Go(func() {
-		defer outputWg.Done()
-		for r := range resultChan {
-			b.printToConsole(r)
-			b.writeOutput(r)
-		}
-	})
-
-	// distribute work items to workers
-	for range numWorkers {
-		wg.Add(1)
-		wg.Go(func() {
-			defer wg.Done()
-			for item := range rowChan {
-				output, err := b.executeItem(item.Index, c, item.Data)
-				if err != nil {
-					b.printError(err)
-					cancel()
-				}
-				resultChan <- output
+	transferRes := func(ctx context.Context, data <-chan *result) {
+		defer wg.Done()
+		for d := range data {
+			select {
+			case <-ctx.Done():
+				return
+			case res <- d:
 			}
-		})
+		}
 	}
 
-	wg.Wait() // Main thread blocked until workers are done.
+	transferErr := func(ctx context.Context, errs <-chan error) {
+		defer eg.Done()
+		for e := range errs {
+			select {
+			case <-ctx.Done():
+				return
+			case err <- e:
+			}
+		}
+	}
 
-	close(resultChan) // since jobs are done, no new res coming, signal og.
-	outputWg.Wait()   // Main thread blocked until og is done.
-	return nil
+	for _, r := range results {
+		wg.Add(1)
+		go transferRes(ctx, r)
+	}
+
+	for _, e := range errs {
+		eg.Add(1)
+		go transferErr(ctx, e)
+	}
+
+	go func() {
+		wg.Wait()
+		eg.Wait()
+		close(res)
+		close(err)
+	}()
+
+	return res, err
+}
+
+func (b *BatchContext) fanoutExecution(ctx context.Context, collCtx *utils.CollectionContext, data <-chan utils.DataItem) ([]<-chan *result, []<-chan error) {
+	concurrency := b.getConcurrency()
+	results := make([]<-chan *result, concurrency)
+	errs := make([]<-chan error, concurrency)
+
+	execute := func(ctx context.Context, data <-chan utils.DataItem) (<-chan *result, <-chan error) {
+		reschan := make(chan *result)
+		errchan := make(chan error)
+
+		go func() {
+			defer close(reschan)
+			defer close(errchan)
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case item, ok := <-data:
+					if !ok {
+						return
+					}
+					res, err := b.executeItem(item.Index, collCtx, item.Data)
+					if res != nil {
+						reschan <- res
+					}
+					if err != nil {
+						errchan <- err
+					}
+				}
+			}
+		}()
+
+		return reschan, errchan
+	}
+
+	for i := range concurrency {
+		results[i], errs[i] = execute(ctx, data)
+	}
+
+	return results, errs
 }
 
 func (b *BatchContext) executeItem(index int, c *utils.CollectionContext, data map[string]any) (*result, error) {
 	env := utils.Merge(c.Env(), data)
 	req, err := utils.ParseNamedRequest(c.Dir, c.Namespace, b.request, env)
 	if err != nil {
-		return nil, err
+		errReqFailed := errors.New("[" + strconv.Itoa(index) + "] " + err.Error())
+		return nil, errReqFailed
 	}
 
 	if b.dryRun {
@@ -111,7 +186,8 @@ func (b *BatchContext) executeItem(index int, c *utils.CollectionContext, data m
 	latency := time.Since(start)
 
 	if err != nil {
-		return nil, err
+		errRespFailed := errors.New("[" + strconv.Itoa(index) + "] " + err.Error())
+		return nil, errRespFailed
 	}
 	return &result{
 		req:     req,

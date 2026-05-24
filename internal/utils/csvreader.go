@@ -5,6 +5,7 @@ import (
 	"encoding/csv"
 	"errors"
 	"io"
+	"strconv"
 )
 
 type CsvReader struct {
@@ -19,8 +20,7 @@ func NewCsvReader(input io.Reader) FileReader {
 
 func (csvReader *CsvReader) Read(ctx context.Context, bufferSize int) (<-chan DataItem, <-chan error) {
 	outchan := make(chan DataItem, bufferSize)
-	// leave this unbuffered. consumer will drain it concurrently or at the end.
-	errchan := make(chan error)
+	errchan := make(chan error, bufferSize)
 
 	go func() {
 		defer close(outchan)
@@ -44,11 +44,11 @@ func (csvReader *CsvReader) Read(ctx context.Context, bufferSize int) (<-chan Da
 
 			if err != nil {
 				SendErr(ctx, errchan, err)
-				return
+				continue
 			}
 
 			if len(record) != len(headers) {
-				errMalformed := errors.New("malformed row")
+				errMalformed := errors.New("[" + strconv.Itoa(index) + "] malformed row")
 				if !SendErr(ctx, errchan, errMalformed) {
 					return
 				}

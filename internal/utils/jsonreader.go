@@ -4,7 +4,9 @@ import (
 	"bufio"
 	"context"
 	"encoding/json"
+	"errors"
 	"io"
+	"strconv"
 )
 
 type JsonReader struct {
@@ -19,7 +21,7 @@ func NewJsonReader(input io.Reader) FileReader {
 
 func (jsonReader *JsonReader) Read(ctx context.Context, bufferSize int) (<-chan DataItem, <-chan error) {
 	outchan := make(chan DataItem, bufferSize)
-	errchan := make(chan error)
+	errchan := make(chan error, bufferSize)
 
 	go func() {
 		var index int
@@ -28,7 +30,8 @@ func (jsonReader *JsonReader) Read(ctx context.Context, bufferSize int) (<-chan 
 			index++
 			var data map[string]any
 			if err := json.Unmarshal(jsonReader.scanner.Bytes(), &data); err != nil {
-				if !SendErr(ctx, errchan, err) {
+				errMalformedjson := errors.New("[" + strconv.Itoa(index) + "] malformed row")
+				if !SendErr(ctx, errchan, errMalformedjson) {
 					return
 				}
 				continue
